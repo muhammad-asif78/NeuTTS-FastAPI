@@ -1,0 +1,13 @@
+name: neutts-fastapi-cpu
+services:
+  neutts-tts:
+    build:
+      context: ../..
+      dockerfile: docker/cpu/Dockerfile
+    volumes:
+      - ../../api:/app/api
+      - ../../neutts-air:/app/neutts-air
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app:/app/api:/app/neutts-air

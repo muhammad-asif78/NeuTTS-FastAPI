@@ -1,0 +1,42 @@
+# Version control
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.py[cod]
+*$py.class
+.pytest_cache
+.coverage
+.coveragerc
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Project specific
+example-references/
+*.md
+!README.md
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db
