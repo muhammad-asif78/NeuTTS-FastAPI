@@ -10,6 +10,21 @@ A FastAPI wrapper for NeuTTS-Air, providing an OpenAI-compatible text-to-speech 
 - **Docker Support**: Easy containerized deployment
 - **Voice Cloning**: Support for custom voice models
 
+## Today's Updates (February 16, 2026)
+
+- Fixed local import path in `api/src/main.py` to avoid module import errors.
+- Added startup warmup to preload NeuTTS model and voice reference tensors, reducing first-request cold-start delay.
+- Improved `/v1/audio/speech` response handling:
+  - returns full WAV bytes with explicit `Content-Length`
+  - adds no-cache headers to prevent stale audio playback on frontend/docs
+- Added `GET /v1/audio/speech` fallback behavior for docs/browser playback compatibility after POST.
+- Added text chunking for long input in `api/src/routers/openai_compatible.py` so full text is synthesized instead of truncating to a short segment.
+- Added in-memory caching for voice reference codes to reduce repeated per-request overhead.
+- Updated Docker CPU setup:
+  - removed dependency on missing root `pyproject.toml`
+  - switched to direct pip install with CPU-only PyTorch wheels
+  - removed problematic bind mounts in compose for better portability
+
 ## Quick Start
 
 ### Using Docker (Recommended)

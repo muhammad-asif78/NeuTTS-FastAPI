@@ -4,9 +4,6 @@ services:
     build:
       context: ../..
       dockerfile: docker/cpu/Dockerfile
-    volumes:
-      - ../../api:/app/api
-      - ../../neutts-air:/app/neutts-air
     ports:
       - "8000:8000"
     environment:
