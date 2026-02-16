@@ -9,27 +9,56 @@ This repo is configured for CPU inference and includes Docker + local run option
 
 ## What Was Updated Today (February 16, 2026)
 
-The following issues were fixed in this repository:
-
-1. Fixed import path in `api/src/main.py` so local `uvicorn` startup works.
-2. Added startup warmup to preload model + voice refs (better first-request behavior).
-3. Updated TTS response handling:
-   - returns full WAV bytes with explicit `Content-Length`
-   - adds no-cache headers to reduce stale playback on frontend/docs
-4. Added `GET /v1/audio/speech` fallback for Swagger/browser player compatibility after a POST.
-5. Added long-text chunking in synthesis pipeline so long input is not truncated.
-6. Added in-memory caching for voice reference tensors.
-7. Updated Docker CPU build and compose files for reliable local usage:
-   - removed missing `pyproject.toml` dependency path
-   - installs CPU PyTorch directly
-   - removed problematic bind mounts
+Updated today: fixed import path, added startup warmup, improved WAV response and caching behavior, added GET playback fallback, added long-text chunking, and updated Docker CPU setup.
 
 ## Supported Voices
 
 - `dave`
 - `jo`
 
-## API
+## Setup
+
+### Option A: Docker (CPU)
+
+```bash
+cd docker/cpu
+docker compose up --build -d
+```
+
+API base URL:
+
+```text
+http://localhost:8000
+```
+
+Stop:
+
+```bash
+docker compose down
+```
+
+### Option B: Local (uvicorn)
+
+From repo root:
+
+```bash
+cd /path/to/NeuTTS-FastAPI
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install --index-url https://download.pytorch.org/whl/cpu torch torchaudio
+pip install fastapi "uvicorn[standard]" pydantic soundfile neutts
+python3 -m uvicorn api.src.main:app --host 0.0.0.0 --port 8000
+```
+
+## How to Use
+
+1. Open docs in browser:
+   - `http://localhost:8000/docs`
+2. Use `POST /v1/audio/speech` to generate speech.
+3. Save or play the returned WAV bytes in frontend.
+
+## API Reference
 
 ### POST `/v1/audio/speech`
 
@@ -61,39 +90,6 @@ Example:
 
 ```bash
 curl "http://localhost:8000/v1/audio/speech?input=Hello&voice=dave" --output hello.wav
-```
-
-## Run With Docker (CPU)
-
-```bash
-cd docker/cpu
-docker compose up --build -d
-```
-
-API base URL:
-
-```text
-http://localhost:8000
-```
-
-Stop:
-
-```bash
-docker compose down
-```
-
-## Run Locally (uvicorn)
-
-From repo root:
-
-```bash
-cd /path/to/NeuTTS-FastAPI
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install --index-url https://download.pytorch.org/whl/cpu torch torchaudio
-pip install fastapi "uvicorn[standard]" pydantic soundfile neutts
-python3 -m uvicorn api.src.main:app --host 0.0.0.0 --port 8000
 ```
 
 ## Test Commands
