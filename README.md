@@ -1,175 +1,162 @@
 # NeuTTS-FastAPI
 
-A FastAPI wrapper for NeuTTS-Air, providing an OpenAI-compatible text-to-speech API.
+FastAPI wrapper for NeuTTS with an OpenAI-compatible speech endpoint:
 
-## Features
+- `POST /v1/audio/speech`
+- response: `audio/wav`
 
-- **OpenAI-Compatible API**: Drop-in replacement for OpenAI's TTS API
-- **CPU-Only Inference**: Optimized for CPU deployment
-- **FastAPI Backend**: High-performance async API server
-- **Docker Support**: Easy containerized deployment
-- **Voice Cloning**: Support for custom voice models
+This repo is configured for CPU inference and includes Docker + local run options.
 
-## Today's Updates (February 16, 2026)
+## What Was Updated Today (February 16, 2026)
 
-- Fixed local import path in `api/src/main.py` to avoid module import errors.
-- Added startup warmup to preload NeuTTS model and voice reference tensors, reducing first-request cold-start delay.
-- Improved `/v1/audio/speech` response handling:
-  - returns full WAV bytes with explicit `Content-Length`
-  - adds no-cache headers to prevent stale audio playback on frontend/docs
-- Added `GET /v1/audio/speech` fallback behavior for docs/browser playback compatibility after POST.
-- Added text chunking for long input in `api/src/routers/openai_compatible.py` so full text is synthesized instead of truncating to a short segment.
-- Added in-memory caching for voice reference codes to reduce repeated per-request overhead.
-- Updated Docker CPU setup:
-  - removed dependency on missing root `pyproject.toml`
-  - switched to direct pip install with CPU-only PyTorch wheels
-  - removed problematic bind mounts in compose for better portability
+The following issues were fixed in this repository:
 
-## Quick Start
+1. Fixed import path in `api/src/main.py` so local `uvicorn` startup works.
+2. Added startup warmup to preload model + voice refs (better first-request behavior).
+3. Updated TTS response handling:
+   - returns full WAV bytes with explicit `Content-Length`
+   - adds no-cache headers to reduce stale playback on frontend/docs
+4. Added `GET /v1/audio/speech` fallback for Swagger/browser player compatibility after a POST.
+5. Added long-text chunking in synthesis pipeline so long input is not truncated.
+6. Added in-memory caching for voice reference tensors.
+7. Updated Docker CPU build and compose files for reliable local usage:
+   - removed missing `pyproject.toml` dependency path
+   - installs CPU PyTorch directly
+   - removed problematic bind mounts
 
-### Using Docker (Recommended)
+## Supported Voices
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/hasithdd/NeuTTS-FastAPI.git
-   cd NeuTTS-FastAPI
-   ```
+- `dave`
+- `jo`
 
-2. **Build and run with Docker Compose:**
-   ```bash
-   cd docker/cpu
-   docker-compose up --build
-   ```
+## API
 
-3. **Test the API:**
-   ```bash
-   curl -X POST "http://localhost:8000/v1/audio/speech" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "input": "Hello, world!",
-       "voice": "dave"
-     }' \
-     --output speech.wav
-   ```
+### POST `/v1/audio/speech`
 
-### Local Development
+Generate speech from input text.
 
-1. **Install dependencies:**
-   ```bash
-   pip install uv
-   uv sync
-   ```
+Request JSON:
 
-2. **Run the server:**
-   ```bash
-   uv run uvicorn api.src.main:app --host 0.0.0.0 --port 8000
-   ```
-
-## API Usage
-
-### POST /v1/audio/speech
-
-Generate speech from text using the specified voice.
-
-**Request Body:**
 ```json
 {
-  "input": "Text to convert to speech",
+  "input": "Hello, this is a test.",
   "voice": "dave"
 }
 ```
 
-**Supported Voices:**
-- `dave`: Male voice
-- `jo`: Female voice
+Response:
 
-**Response:**
-- Content-Type: `audio/wav`
-- Body: WAV audio data
+- `200 OK`
+- `Content-Type: audio/wav`
+- body: WAV bytes
 
-**Example:**
+### GET `/v1/audio/speech`
+
+Compatibility endpoint mainly for browser/docs playback:
+
+- If `input` query param is provided, it synthesizes that text.
+- If `input` is omitted, it returns the last generated audio from POST.
+
+Example:
+
+```bash
+curl "http://localhost:8000/v1/audio/speech?input=Hello&voice=dave" --output hello.wav
+```
+
+## Run With Docker (CPU)
+
+```bash
+cd docker/cpu
+docker compose up --build -d
+```
+
+API base URL:
+
+```text
+http://localhost:8000
+```
+
+Stop:
+
+```bash
+docker compose down
+```
+
+## Run Locally (uvicorn)
+
+From repo root:
+
+```bash
+cd /path/to/NeuTTS-FastAPI
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install --index-url https://download.pytorch.org/whl/cpu torch torchaudio
+pip install fastapi "uvicorn[standard]" pydantic soundfile neutts
+python3 -m uvicorn api.src.main:app --host 0.0.0.0 --port 8000
+```
+
+## Test Commands
+
+### Basic test
+
 ```bash
 curl -X POST "http://localhost:8000/v1/audio/speech" \
   -H "Content-Type: application/json" \
-  -d '{"input": "Hello, world!", "voice": "dave"}' \
-  --output hello.wav
+  -d '{"input":"Hello from NeuTTS","voice":"dave"}' \
+  --output speech.wav
 ```
 
-## Project Structure
-
-```
-NeuTTS-FastAPI/
-├── api/
-│   └── src/
-│       ├── main.py              # FastAPI application
-│       ├── routers/
-│       │   └── openai_compatible.py  # TTS endpoint
-│       └── voices/              # Voice model files
-│           ├── dave.pt
-│           └── jo.pt
-├── neutts-air/                  # NeuTTS-Air library
-├── docker/
-│   └── cpu/                     # Docker configuration
-├── pyproject.toml               # Project dependencies
-└── README.md
-```
-
-## Dependencies
-
-- Python 3.10+
-- NeuTTS-Air
-- FastAPI
-- PyTorch (CPU)
-- SoundFile
-- And other dependencies listed in `pyproject.toml`
-
-## Development
-
-### Running Tests
+### Long-text test
 
 ```bash
-uv run pytest
+curl -X POST "http://localhost:8000/v1/audio/speech" \
+  -H "Content-Type: application/json" \
+  -d '{"input":"Hello, how are you lets they find the result in which i have facing the issue related to the output i which we work for the low latency and testing","voice":"dave"}' \
+  --output long.wav
 ```
 
-### Code Formatting
+## Frontend Integration Notes
 
-```bash
-uv run black .
-uv run isort .
-```
+To avoid wrong/old playback:
 
-## Roadmap
+1. Use POST response bytes directly as the audio source (Blob URL).
+2. Avoid playing a stale static URL without cache-busting.
+3. If you use GET playback, include explicit `input` and `voice` query params.
+4. Open docs at `http://localhost:8000/docs` (use `localhost`, not `0.0.0.0` in browser).
 
-### Core Features
-- [ ] **GPU Support**: Add CUDA acceleration for faster inference on GPU hardware
-- [ ] **Voice Cloning**: Enable users to create custom voices from audio samples
-- [ ] **Streaming Audio**: Implement real-time audio streaming for low-latency TTS
-- [ ] **Multiple Audio Formats**: Support MP3, FLAC, and other popular audio formats
-- [ ] **Batch Processing**: Allow processing multiple text inputs in a single request
+## Latency Notes
 
-### Enhanced Functionality
-- [ ] **Web Interface**: Create a user-friendly web UI for testing and demonstration
-- [ ] **Voice Mixing**: Combine multiple voices or adjust voice characteristics
-- [ ] **Emotion Control**: Add parameters for controlling speech emotion and style
-- [ ] **Multilingual Support**: Extend beyond English to support other languages
-- [ ] **API Rate Limiting**: Implement request throttling and usage controls
+- First request can still be slow on CPU because NeuTTS model load is heavy.
+- Startup warmup is enabled in `api/src/main.py` to reduce first interactive request delay.
+- Long input now runs in chunks and merges output WAV to improve correctness.
 
-### Technical Improvements
-- [ ] **Performance Optimization**: Benchmark and optimize inference speed
-- [ ] **Comprehensive Testing**: Add unit tests, integration tests, and CI/CD pipeline
-- [ ] **API Documentation**: Generate interactive OpenAPI/Swagger documentation
-- [ ] **Container Optimization**: Reduce Docker image size and improve startup time
-- [ ] **Monitoring & Metrics**: Add logging, metrics, and health monitoring
+## Troubleshooting
 
-## Contributing
+### `404 /` in logs
 
-See [Contributing.md](Contributing.md) for guidelines.
+Expected. Root route is not defined.
+
+### `405 GET /v1/audio/speech`
+
+If you still see this, restart server with latest code (old process still running).
+
+### Audio player shows `0:00` or plays old output
+
+- ensure server restart after latest changes
+- hard refresh browser docs
+- verify `POST` request is returning non-empty bytes
+- use terminal `curl --output` to confirm generated file
+
+### Push to upstream GitHub fails with `403`
+
+You need write access to upstream repo. Push to your fork instead and open a PR.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - see `LICENSE`.
 
 ## Acknowledgments
 
-- Based on [NeuTTS-Air](https://github.com/neuphonic/neutts-air)
-- Inspired by [Kokoro-FastAPI](https://github.com/remsky/Kokoro-FastAPI)
+- [NeuTTS / Neuphonic](https://github.com/neuphonic/neutts-air)
+- Inspired by Kokoro-FastAPI style API compatibility
